@@ -1,0 +1,47 @@
+name: OSVVM Regression FIFO with GHDL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  osvvm-ghdl-regression:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install dependencies (GHDL with LLVM backend, Tcl, Tcllib)
+        run: |
+          sudo apt update
+          sudo apt install -y git build-essential \
+            llvm-14 llvm-14-dev llvm-14-tools \
+            zlib1g-dev gnat tcl tcllib
+
+      - name: Build and install GHDL with LLVM backend
+        run: |
+          git clone https://github.com/ghdl/ghdl.git
+          cd ghdl
+          ./configure --with-llvm-config=llvm-config-14
+          make -j$(nproc)
+          sudo make install
+          cd ..
+          ghdl --version
+
+          
+      - name: Run OSVVM regression_axi4_python
+        run: tclsh script/regression_axi4_python.tcl
+
+
+      - name: Upload simulation results (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulation-results
+          path: |
+            **/*.ghw
+            **/*.vcd
